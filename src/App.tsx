@@ -4,6 +4,7 @@ import { Button } from "./Button";
 // @ts-expect-error
 import MyWorker from "./worker?worker&inline";
 import { Table } from "./Table";
+import { LotteryShowcase } from "./LotteryShowcase";
 
 const presets = [
 	{
@@ -325,14 +326,15 @@ export const App = () => {
 
 				<div className="mt-2 sm:mt-0">
 					<Button
-						variant="success"
+						variant="primary"
+						outline
 						onClick={() => {
 							const results = simLottery(chances, numToPick);
 							setLotteryResults(results);
 						}}
 						disabled={chances.length === 0}
 					>
-						Sim Lottery
+						Quick Sim
 					</Button>
 
 					{lotteryResults ? (
@@ -350,6 +352,18 @@ export const App = () => {
 					) : null}
 				</div>
 			</div>
+
+			{chances.length > 0 ? (
+				<div className="mt-4">
+					<LotteryShowcase
+						chances={chances}
+						disabled={chances.length === 0}
+						names={names}
+						numToPick={numToPick}
+						setLotteryResults={setLotteryResults}
+					/>
+				</div>
+			) : null}
 
 			{!probs ? (
 				<div className="my-3">Loading...</div>
