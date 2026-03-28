@@ -1,4 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from "preact/hooks";
+import {
+	useEffect,
+	useLayoutEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "preact/hooks";
 import { Button } from "./Button";
 import { simLottery } from "./simLottery";
 import chicagoBullsMusic from "./assets/audio/chicago-bulls-music.mp3";
@@ -6,14 +12,16 @@ import heartbeatSfx from "./assets/audio/heartbeat.mp3";
 import championsMusic from "./assets/audio/we-are-the-champions.mp3";
 import ballotBoardBackground from "./assets/nba-teams.png";
 import revealDeskBackground from "./assets/nba-draft.png";
-import nbaLogo from "./assets/logo-nba.png";
+import nbaLogo from "./assets/logo-nba.svg";
 import silverNba from "./assets/silver-nba.png";
+import fireworksVideo from "./assets/fireworks-loop.mp4";
 import { getClosestTeamLogo } from "./teamLogos";
 
 const INITIAL_DELAY_MS = 5000;
-const REVEAL_DELAY_MS = 5000;
+const REVEAL_DELAY_MS = 10000;
+const NAME_REVEAL_DELAY_MS = 5000;
 const FINAL_REVEAL_DELAY_MS = 10000;
-const FADE_OUT_DURATION_MS = 2000;
+const FADE_OUT_DURATION_MS = 4000;
 
 const fadeOutAudio = (
 	el: HTMLAudioElement,
@@ -107,14 +115,20 @@ export const LotteryShowcase = ({
 	const heartbeatRef = useRef<HTMLAudioElement>();
 	const heartbeatCtxRef = useRef<AudioContext>();
 	const championsRef = useRef<HTMLAudioElement>();
-	const [musicPlaying, setMusicPlaying] = useState(false);
+
 	const [status, setStatus] = useState<"idle" | "running" | "complete">("idle");
 	const [activeResults, setActiveResults] = useState<number[] | undefined>();
 	const [revealStep, setRevealStep] = useState(-1);
 	const [phase, setPhase] = useState<
 		"waiting" | "reveals" | "topPickPrompt" | "topThree"
 	>("waiting");
-	const [draftSeason, setDraftSeason] = useState("");
+	const [draftSeason, setDraftSeason] = useState(() => {
+		const y = new Date().getFullYear();
+		return `${y}-${String(y + 1).slice(2)}`;
+	});
+	const [countdown, setCountdown] = useState<number | null>(null);
+	const [nameVisible, setNameVisible] = useState(false);
+	const [championsDuration, setChampionsDuration] = useState(30);
 
 	const totalChance = useMemo(
 		() => chances.reduce((sum, chance) => sum + chance, 0),
@@ -128,16 +142,32 @@ export const LotteryShowcase = ({
 	useEffect(() => {
 		audioRef.current = new Audio(chicagoBullsMusic);
 		audioRef.current.loop = true;
-		audioRef.current.addEventListener("play", () => setMusicPlaying(true));
-		audioRef.current.addEventListener("pause", () => setMusicPlaying(false));
+		audioRef.current.currentTime = 8;
 
 		heartbeatRef.current = new Audio(heartbeatSfx);
 		heartbeatRef.current.loop = true;
 
 		championsRef.current = new Audio(championsMusic);
 		championsRef.current.loop = false;
+		championsRef.current.addEventListener("loadedmetadata", () => {
+			if (championsRef.current) {
+				setChampionsDuration(championsRef.current.duration);
+			}
+		});
 
-		void audioRef.current.play().catch(() => {});
+		// Try autoplay immediately; if the browser blocks it, start on first user gesture.
+		void audioRef.current.play().catch(() => {
+			const unlockAudio = () => {
+				if (!audioRef.current || !audioRef.current.paused) {
+					return;
+				}
+				void audioRef.current.play().catch(() => {});
+				document.removeEventListener("click", unlockAudio);
+				document.removeEventListener("keydown", unlockAudio);
+			};
+			document.addEventListener("click", unlockAudio);
+			document.addEventListener("keydown", unlockAudio);
+		});
 
 		return () => {
 			[audioRef, heartbeatRef, championsRef].forEach((ref) => {
@@ -170,7 +200,7 @@ export const LotteryShowcase = ({
 						const ctx = new AudioContext();
 						const source = ctx.createMediaElementSource(heartbeatRef.current);
 						const gain = ctx.createGain();
-						gain.gain.value = 3.5;
+						gain.gain.value = 1;
 						source.connect(gain);
 						gain.connect(ctx.destination);
 						heartbeatCtxRef.current = ctx;
@@ -180,7 +210,7 @@ export const LotteryShowcase = ({
 				}
 
 				void heartbeatCtxRef.current?.resume();
-				heartbeatRef.current.currentTime = 0;
+				heartbeatRef.current.currentTime = 8;
 				void heartbeatRef.current.play().catch(() => {});
 			};
 
@@ -201,6 +231,47 @@ export const LotteryShowcase = ({
 			}
 		}
 	}, [phase]);
+
+	useEffect(() => {
+		if (status !== "running" || phase !== "waiting") {
+			return;
+		}
+
+		const totalSeconds = INITIAL_DELAY_MS / 1000;
+		setCountdown(totalSeconds);
+
+		const interval = window.setInterval(() => {
+			setCountdown((prev) => {
+				if (prev === null || prev <= 1) {
+					clearInterval(interval);
+					return null;
+				}
+				return prev - 1;
+			});
+		}, 1000);
+
+		return () => window.clearInterval(interval);
+	}, [status, phase]);
+
+	// Reset synchronously before the browser paints to avoid a one-frame flash
+	// where the previous step's nameVisible=true leaks into the new step.
+	useLayoutEffect(() => {
+		if (status !== "running" || phase !== "reveals") {
+			return;
+		}
+		setNameVisible(false);
+	}, [revealStep, phase, status]);
+
+	useEffect(() => {
+		if (status !== "running" || phase !== "reveals") {
+			return;
+		}
+		const t = window.setTimeout(
+			() => setNameVisible(true),
+			NAME_REVEAL_DELAY_MS,
+		);
+		return () => window.clearTimeout(t);
+	}, [revealStep, phase, status]);
 
 	useEffect(() => {
 		if (status !== "running" || !activeResults) {
@@ -297,7 +368,9 @@ export const LotteryShowcase = ({
 			: phase === "topPickPrompt"
 			? "AND THE TOP PICK GOES TO..."
 			: currentPositions.length > 1
-			? "The last envelopes are open. The top 3 are now on stage together."
+			? `Congratulations ${
+					activeResults ? names[activeResults[0]] : ""
+			  }! Have a great season managers!`
 			: currentPositions.length === 1
 			? `${ordinal(currentPositions[0] + 1)} pick is being announced.`
 			: "Get ready...";
@@ -309,7 +382,7 @@ export const LotteryShowcase = ({
 
 		const results = simLottery(chances, numToPick);
 		const currentYear = new Date().getFullYear();
-		setDraftSeason(`${currentYear}-${currentYear + 1}`);
+		setDraftSeason(`${currentYear}-${String(currentYear + 1).slice(2)}`);
 		setLotteryResults(undefined);
 		setActiveResults(results);
 		setRevealStep(-1);
@@ -348,6 +421,18 @@ export const LotteryShowcase = ({
 	return (
 		<section className="lottery-stage">
 			<div className="lottery-stage__arenaGlow" />
+			{phase === "topThree" ? (
+				<video
+					className="lottery-stage__fireworks"
+					src={fireworksVideo}
+					autoPlay
+					loop
+					muted
+					playsInline
+					aria-hidden="true"
+					style={{ animationDuration: `${championsDuration}s` }}
+				/>
+			) : null}
 			<div className="lottery-stage__brandBar">
 				<div className="lottery-stage__leagueMark">
 					<img
@@ -369,10 +454,12 @@ export const LotteryShowcase = ({
 			<div className="lottery-stage__header">
 				<div>
 					<div className="lottery-stage__eyebrow">Commissioner Reveal Mode</div>
-					<h2 className="lottery-stage__title">Lottery Reveal Show</h2>
+					<h2 className="lottery-stage__title">
+						{draftSeason} Rookie Lottery Night
+					</h2>
 					<p className="lottery-stage__subtitle">
 						{status === "idle"
-							? "14 teams, only 1 will land the top pick. Ready when you are."
+							? "14 teams, only 1 will land the top pick."
 							: statusMessage}
 					</p>
 				</div>
@@ -381,10 +468,10 @@ export const LotteryShowcase = ({
 					<button
 						className="lottery-start-btn"
 						onClick={startLottery}
-						disabled={disabled || names.length === 0}
+						disabled={disabled || names.length === 0 || status === "running"}
 						type="button"
 					>
-						{status === "idle" ? "Start Lottery" : "Run Again"}
+						Start Lottery
 					</button>
 				</div>
 			</div>
@@ -402,10 +489,13 @@ export const LotteryShowcase = ({
 					<div className="lottery-stage__ballotGrid">
 						{names.map((name, teamIndex) => {
 							const revealedPick = revealedPickByTeam.get(teamIndex);
-							const isActive = currentPositions.some(
+							const isPending = currentPositions.some(
 								(position) => activeResults?.[position] === teamIndex,
 							);
-							const isRevealed = revealedPick !== undefined;
+							// Only highlight/reveal the active card once the name is shown
+							const isActive = isPending && nameVisible;
+							const isRevealed =
+								revealedPick !== undefined && (!isPending || nameVisible);
 							const share =
 								totalChance > 0 ? (chances[teamIndex] / totalChance) * 100 : 0;
 							const matchedLogo = getClosestTeamLogo(name);
@@ -473,14 +563,19 @@ export const LotteryShowcase = ({
 				>
 					<div className="lottery-stage__panelTitle">Reveal Desk</div>
 
-					{activeResults && phase === "topPickPrompt" ? (
-						<div className="lottery-stage__headline">
-							<div className="lottery-stage__headlineEyebrow">
-								Final envelope on the podium
+					{activeResults && phase === "waiting" ? (
+						<div className="lottery-stage__countdown">
+							<div className="lottery-stage__countdownEyebrow">
+								Get ready...
 							</div>
-							<div className="lottery-stage__headlineText">
-								The #1 pick of the {draftSeason} Ultimate League Rookie Draft
-								goes to...
+							<div className="lottery-stage__countdownNumber" key={countdown}>
+								{countdown}
+							</div>
+						</div>
+					) : activeResults && phase === "topPickPrompt" ? (
+						<div className="lottery-stage__spotlight" key="top-pick-prompt">
+							<div className="lottery-stage__spotlightLabel lottery-stage__spotlightLabel--big">
+								The 1st pick goes to...
 							</div>
 						</div>
 					) : activeResults && currentPositions.length > 0 ? (
@@ -489,18 +584,26 @@ export const LotteryShowcase = ({
 								className="lottery-stage__spotlight"
 								key={`spotlight-${currentPositions[0]}`}
 							>
-								<div className="lottery-stage__spotlightLabel">
-									Now revealing the {ordinal(currentPositions[0] + 1)} pick
+								<div
+									className={`lottery-stage__spotlightLabel${
+										nameVisible ? "" : " lottery-stage__spotlightLabel--big"
+									}`}
+								>
+									The {ordinal(currentPositions[0] + 1)} pick goes to
 								</div>
-								<div className="lottery-stage__spotlightName">
-									{names[activeResults[currentPositions[0]]]}
-								</div>
-								<div className="lottery-stage__spotlightOdds">
-									{formatChanceShare(
-										chances[activeResults[currentPositions[0]]],
-										totalChance,
-									)}
-								</div>
+								{nameVisible ? (
+									<>
+										<div className="lottery-stage__spotlightName">
+											{names[activeResults[currentPositions[0]]]}
+										</div>
+										<div className="lottery-stage__spotlightOdds">
+											{formatChanceShare(
+												chances[activeResults[currentPositions[0]]],
+												totalChance,
+											)}
+										</div>
+									</>
+								) : null}
 							</div>
 						) : (
 							<div className="lottery-stage__podium" key="podium-reveal">
@@ -566,7 +669,9 @@ export const LotteryShowcase = ({
 										{ordinal(position + 1)}
 									</div>
 									<div className="lottery-pick-card__team">
-										{isRevealed && teamIndex !== undefined
+										{isRevealed &&
+										teamIndex !== undefined &&
+										(!isCurrent || nameVisible)
 											? names[teamIndex]
 											: "Awaiting reveal"}
 									</div>

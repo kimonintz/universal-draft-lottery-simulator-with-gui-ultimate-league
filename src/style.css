@@ -39,6 +39,64 @@
 		inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
+.lottery-stage__audioPrompt {
+	position: relative;
+	z-index: 2;
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 14px;
+	padding: 8px 18px;
+	border-radius: 999px;
+	background: rgba(15, 23, 42, 0.7);
+	border: 1px solid rgba(250, 204, 21, 0.45);
+	font-size: 0.85rem;
+	font-weight: 600;
+	color: #fef08a;
+	letter-spacing: 0.04em;
+	animation: audio-prompt-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes audio-prompt-pulse {
+	0%,
+	100% {
+		opacity: 1;
+	}
+	50% {
+		opacity: 0.55;
+	}
+}
+
+@keyframes fireworks-in {
+	0% {
+		opacity: 0;
+		transform: scale(1.08);
+	}
+	20% {
+		opacity: 1;
+	}
+	85% {
+		opacity: 1;
+		transform: scale(1);
+	}
+	100% {
+		opacity: 0;
+		transform: scale(0.97);
+	}
+}
+
+.lottery-stage__fireworks {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	mix-blend-mode: screen;
+	pointer-events: none;
+	z-index: 10;
+	animation: fireworks-in 30s ease-in-out forwards;
+}
+
 .lottery-stage__arenaGlow {
 	position: absolute;
 	inset: 0;
@@ -81,13 +139,11 @@
 }
 
 .lottery-stage__leagueLogo {
-	width: 72px;
-	height: 96px;
+	width: 52px;
+	height: auto;
 	display: block;
-	object-fit: contain;
-	background: transparent;
-	padding: 0;
-	border-radius: 0;
+	border-radius: 12px;
+	flex-shrink: 0;
 	box-shadow: 0 12px 30px rgba(15, 23, 42, 0.32);
 }
 
@@ -96,7 +152,7 @@
 	font-weight: 700;
 	letter-spacing: 0.18em;
 	text-transform: uppercase;
-	color: #cbd5e1;
+	color: #ea6c0a;
 }
 
 .lottery-stage__leagueSubLabel {
@@ -129,6 +185,8 @@
 	margin: 4px 0 6px;
 	font-size: 1.9rem;
 	line-height: 1.1;
+	font-weight: 800;
+	color: #ea6c0a;
 }
 
 .lottery-stage__subtitle {
@@ -156,9 +214,9 @@
 	text-transform: uppercase;
 	color: #fff;
 	cursor: pointer;
-	background: #16a34a;
-	box-shadow: 0 4px 20px rgba(34, 197, 94, 0.55),
-		0 0 40px rgba(34, 197, 94, 0.3), 0 1px 0 rgba(255, 255, 255, 0.18) inset;
+	background: #ea6c0a;
+	box-shadow: 0 4px 20px rgba(249, 115, 22, 0.55),
+		0 0 40px rgba(249, 115, 22, 0.3), 0 1px 0 rgba(255, 255, 255, 0.18) inset;
 	transition: transform 120ms ease, box-shadow 120ms ease;
 	animation: start-btn-pulse 2.4s ease-in-out infinite;
 }
@@ -171,8 +229,8 @@
 
 .lottery-start-btn:not(:disabled):hover {
 	transform: translateY(-2px) scale(1.03);
-	box-shadow: 0 8px 30px rgba(34, 197, 94, 0.75),
-		0 0 60px rgba(34, 197, 94, 0.45), 0 1px 0 rgba(255, 255, 255, 0.22) inset;
+	box-shadow: 0 8px 30px rgba(249, 115, 22, 0.75),
+		0 0 60px rgba(249, 115, 22, 0.45), 0 1px 0 rgba(255, 255, 255, 0.22) inset;
 }
 
 .lottery-start-btn:not(:disabled):active {
@@ -196,12 +254,12 @@
 @keyframes start-btn-pulse {
 	0%,
 	100% {
-		box-shadow: 0 4px 20px rgba(34, 197, 94, 0.55),
-			0 0 40px rgba(34, 197, 94, 0.3), 0 1px 0 rgba(255, 255, 255, 0.18) inset;
+		box-shadow: 0 4px 20px rgba(249, 115, 22, 0.55),
+			0 0 40px rgba(249, 115, 22, 0.3), 0 1px 0 rgba(255, 255, 255, 0.18) inset;
 	}
 	50% {
-		box-shadow: 0 4px 28px rgba(34, 197, 94, 0.85),
-			0 0 70px rgba(34, 197, 94, 0.55), 0 1px 0 rgba(255, 255, 255, 0.18) inset;
+		box-shadow: 0 4px 28px rgba(249, 115, 22, 0.85),
+			0 0 70px rgba(249, 115, 22, 0.55), 0 1px 0 rgba(255, 255, 255, 0.18) inset;
 	}
 }
 
@@ -284,17 +342,18 @@
 }
 
 .lottery-ballot-card {
+	filter: brightness(1.2);
 	display: grid;
 	grid-template-columns: auto auto minmax(0, 1fr);
 	gap: 12px;
 	align-items: center;
 	padding: 12px 14px;
 	border-radius: 18px;
-	background: rgba(30, 41, 59, 0.74);
+	background: rgba(30, 41, 59, 1);
 	border: 1px solid rgba(148, 163, 184, 0.12);
 	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 	transition: transform 220ms ease, border-color 220ms ease,
-		background 220ms ease, opacity 220ms ease;
+		background 220ms ease, opacity 400ms ease;
 }
 
 .lottery-ballot-card--active {
@@ -311,7 +370,14 @@
 }
 
 .lottery-ballot-card--revealed {
-	opacity: 0.72;
+	opacity: 0.75;
+	filter: brightness(1);
+	background: rgba(30, 41, 59, 0.75);
+}
+
+.lottery-ballot-card--active {
+	opacity: 1;
+	filter: brightness(1.2);
 }
 
 .lottery-ballot-card__seed {
@@ -393,6 +459,66 @@
 	text-transform: uppercase;
 	color: #cbd5e1;
 	white-space: nowrap;
+}
+
+@keyframes countdown-pop {
+	0% {
+		opacity: 0;
+		transform: scale(2.2);
+		filter: blur(8px);
+		text-shadow: 0 0 60px #fff, 0 0 120px rgba(249, 115, 22, 0.8);
+	}
+	30% {
+		opacity: 1;
+		transform: scale(0.95);
+		filter: blur(0);
+		text-shadow: 0 0 30px rgba(255, 255, 255, 0.7),
+			0 0 60px rgba(249, 115, 22, 0.5);
+	}
+	60% {
+		transform: scale(1.05);
+	}
+	100% {
+		transform: scale(1);
+		text-shadow: 0 0 16px rgba(255, 255, 255, 0.5),
+			0 0 32px rgba(249, 115, 22, 0.3);
+	}
+}
+
+.lottery-stage__countdown {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	min-height: 220px;
+	padding: 20px;
+	border-radius: 22px;
+	background: radial-gradient(
+			circle at center,
+			rgba(249, 115, 22, 0.18),
+			transparent 55%
+		),
+		rgba(15, 23, 42, 0.5);
+	border: 1px solid rgba(249, 115, 22, 0.2);
+	text-align: center;
+}
+
+.lottery-stage__countdownEyebrow {
+	font-size: 0.85rem;
+	font-weight: 700;
+	letter-spacing: 0.18em;
+	text-transform: uppercase;
+	color: #93c5fd;
+	margin-bottom: 16px;
+}
+
+.lottery-stage__countdownNumber {
+	font-family: Kanit;
+	font-size: clamp(5rem, 12vw, 9rem);
+	font-weight: 800;
+	line-height: 1;
+	color: #f8fafc;
+	animation: countdown-pop 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .lottery-stage__headline {
@@ -568,6 +694,15 @@
 	letter-spacing: 0.12em;
 	text-transform: uppercase;
 	color: #93c5fd;
+	transition: font-size 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+		letter-spacing 0.4s ease;
+}
+
+.lottery-stage__spotlightLabel--big {
+	font-size: clamp(1.6rem, 3vw, 2.4rem);
+	letter-spacing: 0.1em;
+	color: #93c5fd;
+	text-shadow: 0 0 18px rgba(147, 197, 253, 0.4);
 }
 
 .lottery-stage__spotlight .lottery-stage__spotlightLabel {
@@ -713,7 +848,8 @@
 	font-weight: 800;
 	letter-spacing: 0.01em;
 	color: #f8fafc;
-	animation: blister-flash 1.8s cubic-bezier(0.22, 1, 0.36, 1) 0.25s both;
+	animation: blister-flash 1.8s cubic-bezier(0.22, 1, 0.36, 1) 0.25s both,
+		name-throb 1.4s ease-in-out 0.25s infinite;
 }
 
 .lottery-podium-card__odds {
