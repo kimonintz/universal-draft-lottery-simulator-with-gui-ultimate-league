@@ -143,6 +143,78 @@
 	flex-wrap: wrap;
 }
 
+.lottery-start-btn {
+	position: relative;
+	overflow: hidden;
+	padding: 12px 28px;
+	border: none;
+	border-radius: 14px;
+	font-family: Kanit;
+	font-size: 1.1rem;
+	font-weight: 800;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: #fff;
+	cursor: pointer;
+	background: #16a34a;
+	box-shadow: 0 4px 20px rgba(34, 197, 94, 0.55),
+		0 0 40px rgba(34, 197, 94, 0.3), 0 1px 0 rgba(255, 255, 255, 0.18) inset;
+	transition: transform 120ms ease, box-shadow 120ms ease;
+	animation: start-btn-pulse 2.4s ease-in-out infinite;
+}
+
+.lottery-start-btn:disabled {
+	opacity: 0.45;
+	cursor: not-allowed;
+	animation: none;
+}
+
+.lottery-start-btn:not(:disabled):hover {
+	transform: translateY(-2px) scale(1.03);
+	box-shadow: 0 8px 30px rgba(34, 197, 94, 0.75),
+		0 0 60px rgba(34, 197, 94, 0.45), 0 1px 0 rgba(255, 255, 255, 0.22) inset;
+}
+
+.lottery-start-btn:not(:disabled):active {
+	transform: translateY(1px) scale(0.98);
+}
+
+.lottery-start-btn::before {
+	content: "";
+	position: absolute;
+	inset: 0;
+	background: linear-gradient(
+		105deg,
+		transparent 30%,
+		rgba(255, 255, 255, 0.28) 50%,
+		transparent 70%
+	);
+	background-size: 200% 100%;
+	animation: start-btn-glare 3s ease infinite;
+}
+
+@keyframes start-btn-pulse {
+	0%,
+	100% {
+		box-shadow: 0 4px 20px rgba(34, 197, 94, 0.55),
+			0 0 40px rgba(34, 197, 94, 0.3), 0 1px 0 rgba(255, 255, 255, 0.18) inset;
+	}
+	50% {
+		box-shadow: 0 4px 28px rgba(34, 197, 94, 0.85),
+			0 0 70px rgba(34, 197, 94, 0.55), 0 1px 0 rgba(255, 255, 255, 0.18) inset;
+	}
+}
+
+@keyframes start-btn-glare {
+	0%,
+	100% {
+		background-position: -200% 0;
+	}
+	50% {
+		background-position: 200% 0;
+	}
+}
+
 .lottery-stage__grid {
 	position: relative;
 	z-index: 1;
@@ -352,8 +424,8 @@
 .lottery-stage__headlineText {
 	margin-top: 14px;
 	font-family: Kanit;
-	font-size: clamp(2rem, 4vw, 3.5rem);
-	line-height: 1;
+	font-size: clamp(1.2rem, 2.4vw, 2rem);
+	line-height: 1.2;
 	color: #f8fafc;
 	text-shadow: 0 10px 30px rgba(249, 115, 22, 0.22);
 }
@@ -361,6 +433,109 @@
 .lottery-stage__headlineSubtext {
 	margin-top: 10px;
 	color: rgba(226, 232, 240, 0.82);
+}
+
+@keyframes blister-flash {
+	0% {
+		opacity: 0;
+		transform: scale(2.4);
+		filter: brightness(6) blur(12px);
+		text-shadow: 0 0 80px #fff, 0 0 120px rgba(249, 115, 22, 0.9),
+			0 0 200px rgba(37, 99, 235, 0.7);
+		letter-spacing: 0.35em;
+	}
+	12% {
+		opacity: 1;
+		filter: brightness(3) blur(3px);
+		transform: scale(1.18);
+		text-shadow: 0 0 40px #fff, 0 0 80px rgba(249, 115, 22, 0.7);
+	}
+	28% {
+		transform: scale(0.96);
+		filter: brightness(1.2) blur(0px);
+		letter-spacing: 0.02em;
+		text-shadow: 0 0 20px rgba(249, 115, 22, 0.5),
+			0 8px 24px rgba(15, 23, 42, 0.4);
+	}
+	42% {
+		transform: scale(1.04);
+	}
+	55% {
+		transform: scale(1);
+		text-shadow: 0 0 30px rgba(249, 115, 22, 0.35),
+			0 8px 24px rgba(15, 23, 42, 0.4);
+	}
+	70%,
+	80% {
+		text-shadow: 0 0 50px rgba(249, 115, 22, 0.55),
+			0 0 100px rgba(37, 99, 235, 0.3), 0 8px 24px rgba(15, 23, 42, 0.4);
+	}
+	100% {
+		transform: scale(1);
+		filter: brightness(1);
+		text-shadow: 0 0 30px rgba(249, 115, 22, 0.35),
+			0 8px 24px rgba(15, 23, 42, 0.4);
+	}
+}
+
+@keyframes blister-spotlight-flash {
+	0% {
+		background: radial-gradient(
+				circle at top,
+				rgba(255, 255, 255, 0.65),
+				transparent 42%
+			),
+			rgba(15, 23, 42, 0.5);
+		border-color: rgba(255, 255, 255, 0.9);
+		box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.3),
+			0 0 80px rgba(249, 115, 22, 0.6);
+	}
+	18% {
+		background: radial-gradient(
+				circle at top,
+				rgba(249, 115, 22, 0.55),
+				transparent 42%
+			),
+			rgba(15, 23, 42, 0.5);
+		border-color: rgba(249, 115, 22, 0.8);
+		box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.4),
+			0 0 60px rgba(249, 115, 22, 0.4);
+	}
+	60%,
+	100% {
+		background: radial-gradient(
+				circle at top,
+				rgba(56, 189, 248, 0.25),
+				transparent 40%
+			),
+			rgba(15, 23, 42, 0.5);
+		border-color: rgba(148, 163, 184, 0.12);
+		box-shadow: none;
+	}
+}
+
+@keyframes blister-label-in {
+	0% {
+		opacity: 0;
+		transform: translateY(-10px);
+		letter-spacing: 0.5em;
+	}
+	100% {
+		opacity: 1;
+		transform: translateY(0);
+		letter-spacing: 0.12em;
+	}
+}
+
+@keyframes blister-odds-in {
+	0% {
+		opacity: 0;
+		transform: translateY(10px);
+	}
+	100% {
+		opacity: 1;
+		transform: translateY(0);
+	}
 }
 
 .lottery-stage__spotlight,
@@ -382,6 +557,10 @@
 	text-align: center;
 }
 
+.lottery-stage__spotlight {
+	animation: blister-spotlight-flash 1.4s ease-out both;
+}
+
 .lottery-stage__spotlightLabel,
 .lottery-stage__placeholderTitle {
 	font-size: 0.85rem;
@@ -389,6 +568,24 @@
 	letter-spacing: 0.12em;
 	text-transform: uppercase;
 	color: #93c5fd;
+}
+
+.lottery-stage__spotlight .lottery-stage__spotlightLabel {
+	animation: blister-label-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.05s both;
+}
+
+@keyframes name-throb {
+	0%,
+	100% {
+		transform: scale(1);
+		text-shadow: 0 0 14px rgba(255, 255, 255, 0.55),
+			0 0 28px rgba(249, 115, 22, 0.25), 0 8px 24px rgba(15, 23, 42, 0.4);
+	}
+	50% {
+		transform: scale(1.06);
+		text-shadow: 0 0 22px rgba(255, 255, 255, 0.85),
+			0 0 44px rgba(249, 115, 22, 0.45), 0 8px 24px rgba(15, 23, 42, 0.4);
+	}
 }
 
 .lottery-stage__spotlightName {
@@ -399,13 +596,18 @@
 	font-weight: 800;
 	letter-spacing: 0.01em;
 	color: #f8fafc;
-	text-shadow: 0 12px 30px rgba(37, 99, 235, 0.25);
+	animation: blister-flash 2s cubic-bezier(0.22, 1, 0.36, 1) both,
+		name-throb 1.4s ease-in-out 0s infinite;
 }
 
 .lottery-stage__spotlightOdds,
 .lottery-stage__placeholderText {
 	margin-top: 8px;
 	color: rgba(226, 232, 240, 0.8);
+}
+
+.lottery-stage__spotlight .lottery-stage__spotlightOdds {
+	animation: blister-odds-in 0.5s ease-out 0.55s both;
 }
 
 .lottery-stage__placeholderBall {
@@ -426,6 +628,36 @@
 	align-items: end;
 }
 
+@keyframes podium-card-in {
+	0% {
+		opacity: 0;
+		transform: translateY(40px) scale(0.88);
+		filter: brightness(4) blur(8px);
+		box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.5),
+			0 0 80px rgba(249, 115, 22, 0.7);
+	}
+	18% {
+		opacity: 1;
+		transform: translateY(-6px) scale(1.04);
+		filter: brightness(1.6) blur(1px);
+		box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.5),
+			0 0 40px rgba(249, 115, 22, 0.4);
+	}
+	34% {
+		transform: translateY(3px) scale(0.98);
+		filter: brightness(1) blur(0);
+	}
+	48% {
+		transform: translateY(-2px) scale(1.01);
+	}
+	62%,
+	100% {
+		transform: translateY(0) scale(1);
+		filter: brightness(1);
+		box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+	}
+}
+
 .lottery-podium-card {
 	display: flex;
 	flex-direction: column;
@@ -441,6 +673,17 @@
 	border: 1px solid rgba(148, 163, 184, 0.16);
 	text-align: center;
 	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+	animation: podium-card-in 1s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.lottery-podium-card:nth-child(1) {
+	animation-delay: 0.1s;
+}
+.lottery-podium-card:nth-child(2) {
+	animation-delay: 0s;
+}
+.lottery-podium-card:nth-child(3) {
+	animation-delay: 0.2s;
 }
 
 .lottery-podium-card--champion {
@@ -459,6 +702,7 @@
 	letter-spacing: 0.12em;
 	text-transform: uppercase;
 	color: #fdba74;
+	animation: blister-label-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.3s both;
 }
 
 .lottery-podium-card__name {
@@ -469,11 +713,13 @@
 	font-weight: 800;
 	letter-spacing: 0.01em;
 	color: #f8fafc;
+	animation: blister-flash 1.8s cubic-bezier(0.22, 1, 0.36, 1) 0.25s both;
 }
 
 .lottery-podium-card__odds {
 	margin-top: 10px;
 	color: rgba(226, 232, 240, 0.8);
+	animation: blister-odds-in 0.5s ease-out 0.6s both;
 }
 
 .lottery-stage__pickBoard {

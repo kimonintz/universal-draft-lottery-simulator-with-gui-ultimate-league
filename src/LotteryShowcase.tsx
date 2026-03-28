@@ -2,14 +2,41 @@ import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { Button } from "./Button";
 import { simLottery } from "./simLottery";
 import chicagoBullsMusic from "./assets/audio/chicago-bulls-music.mp3";
+import heartbeatSfx from "./assets/audio/heartbeat.mp3";
+import championsMusic from "./assets/audio/we-are-the-champions.mp3";
 import ballotBoardBackground from "./assets/nba-teams.png";
 import revealDeskBackground from "./assets/nba-draft.png";
 import nbaLogo from "./assets/logo-nba.png";
 import silverNba from "./assets/silver-nba.png";
 import { getClosestTeamLogo } from "./teamLogos";
 
+const INITIAL_DELAY_MS = 5000;
 const REVEAL_DELAY_MS = 5000;
 const FINAL_REVEAL_DELAY_MS = 10000;
+const FADE_OUT_DURATION_MS = 2000;
+
+const fadeOutAudio = (
+	el: HTMLAudioElement,
+	durationMs: number,
+	onDone?: () => void,
+) => {
+	const startVolume = el.volume;
+	const steps = 30;
+	const stepMs = durationMs / steps;
+	const stepSize = startVolume / steps;
+	let step = 0;
+
+	const interval = window.setInterval(() => {
+		step++;
+		el.volume = Math.max(0, startVolume - step * stepSize);
+		if (step >= steps) {
+			clearInterval(interval);
+			el.pause();
+			el.volume = startVolume;
+			onDone?.();
+		}
+	}, stepMs);
+};
 
 const ordinal = (x: number) => {
 	let suffix;
@@ -77,13 +104,17 @@ export const LotteryShowcase = ({
 	setLotteryResults,
 }: LotteryShowcaseProps) => {
 	const audioRef = useRef<HTMLAudioElement>();
+	const heartbeatRef = useRef<HTMLAudioElement>();
+	const heartbeatCtxRef = useRef<AudioContext>();
+	const championsRef = useRef<HTMLAudioElement>();
 	const [musicPlaying, setMusicPlaying] = useState(false);
 	const [status, setStatus] = useState<"idle" | "running" | "complete">("idle");
 	const [activeResults, setActiveResults] = useState<number[] | undefined>();
 	const [revealStep, setRevealStep] = useState(-1);
-	const [phase, setPhase] = useState<"reveals" | "topPickPrompt" | "topThree">(
-		"reveals",
-	);
+	const [phase, setPhase] = useState<
+		"waiting" | "reveals" | "topPickPrompt" | "topThree"
+	>("waiting");
+	const [draftSeason, setDraftSeason] = useState("");
 
 	const totalChance = useMemo(
 		() => chances.reduce((sum, chance) => sum + chance, 0),
@@ -97,22 +128,25 @@ export const LotteryShowcase = ({
 	useEffect(() => {
 		audioRef.current = new Audio(chicagoBullsMusic);
 		audioRef.current.loop = true;
-		audioRef.current.addEventListener("play", () => {
-			setMusicPlaying(true);
-		});
-		audioRef.current.addEventListener("pause", () => {
-			setMusicPlaying(false);
-		});
+		audioRef.current.addEventListener("play", () => setMusicPlaying(true));
+		audioRef.current.addEventListener("pause", () => setMusicPlaying(false));
 
-		void audioRef.current.play().catch(() => {
-			// Ignore autoplay failures and let the separate music control start it.
-		});
+		heartbeatRef.current = new Audio(heartbeatSfx);
+		heartbeatRef.current.loop = true;
+
+		championsRef.current = new Audio(championsMusic);
+		championsRef.current.loop = false;
+
+		void audioRef.current.play().catch(() => {});
 
 		return () => {
-			if (audioRef.current) {
-				audioRef.current.pause();
-				audioRef.current.currentTime = 0;
-			}
+			[audioRef, heartbeatRef, championsRef].forEach((ref) => {
+				if (ref.current) {
+					ref.current.pause();
+					ref.current.currentTime = 0;
+				}
+			});
+			void heartbeatCtxRef.current?.close();
 		};
 	}, []);
 
@@ -120,16 +154,74 @@ export const LotteryShowcase = ({
 		setStatus("idle");
 		setActiveResults(undefined);
 		setRevealStep(-1);
-		setPhase("reveals");
+		setPhase("waiting");
 	}, [chances, names, numToPick]);
 
 	useEffect(() => {
-		if (status !== "running" || revealStep < 0 || !activeResults) {
+		if (phase === "topPickPrompt") {
+			// Fade out Bulls music then start heartbeat
+			const startHeartbeat = () => {
+				if (!heartbeatRef.current) {
+					return;
+				}
+
+				if (!heartbeatCtxRef.current) {
+					try {
+						const ctx = new AudioContext();
+						const source = ctx.createMediaElementSource(heartbeatRef.current);
+						const gain = ctx.createGain();
+						gain.gain.value = 3.5;
+						source.connect(gain);
+						gain.connect(ctx.destination);
+						heartbeatCtxRef.current = ctx;
+					} catch {
+						heartbeatRef.current.volume = 1.0;
+					}
+				}
+
+				void heartbeatCtxRef.current?.resume();
+				heartbeatRef.current.currentTime = 0;
+				void heartbeatRef.current.play().catch(() => {});
+			};
+
+			if (audioRef.current && !audioRef.current.paused) {
+				fadeOutAudio(audioRef.current, FADE_OUT_DURATION_MS, startHeartbeat);
+			} else {
+				startHeartbeat();
+			}
+		} else if (phase === "topThree") {
+			// Stop heartbeat, play Champions
+			if (heartbeatRef.current) {
+				heartbeatRef.current.pause();
+				heartbeatRef.current.currentTime = 0;
+			}
+			if (championsRef.current) {
+				championsRef.current.currentTime = 0;
+				void championsRef.current.play().catch(() => {});
+			}
+		}
+	}, [phase]);
+
+	useEffect(() => {
+		if (status !== "running" || !activeResults) {
 			return;
 		}
 
 		const finalRevealStep = revealGroups.length - 1;
 		const lastSingleRevealStep = Math.max(0, finalRevealStep - 1);
+
+		if (phase === "waiting") {
+			const timeout = window.setTimeout(() => {
+				setPhase("reveals");
+				setRevealStep(0);
+			}, INITIAL_DELAY_MS);
+			return () => window.clearTimeout(timeout);
+		}
+
+		if (revealStep < 0) {
+			return;
+		}
+
 		const timeout = window.setTimeout(
 			() => {
 				if (phase === "reveals") {
@@ -164,7 +256,10 @@ export const LotteryShowcase = ({
 	]);
 
 	const currentPositions =
-		status === "idle" || revealStep < 0 || phase === "topPickPrompt"
+		status === "idle" ||
+		revealStep < 0 ||
+		phase === "waiting" ||
+		phase === "topPickPrompt"
 			? []
 			: revealGroups[revealStep] ?? [];
 
@@ -197,11 +292,15 @@ export const LotteryShowcase = ({
 	const statusMessage =
 		status === "idle"
 			? "Start the live reveal to announce picks from the back of the draft board up to a simultaneous top-3 finish."
+			: phase === "waiting"
+			? "Get ready..."
 			: phase === "topPickPrompt"
 			? "AND THE TOP PICK GOES TO..."
 			: currentPositions.length > 1
 			? "The last envelopes are open. The top 3 are now on stage together."
-			: `${ordinal(currentPositions[0] + 1)} pick is being announced.`;
+			: currentPositions.length === 1
+			? `${ordinal(currentPositions[0] + 1)} pick is being announced.`
+			: "Get ready...";
 
 	const startLottery = () => {
 		if (disabled || names.length === 0) {
@@ -209,18 +308,26 @@ export const LotteryShowcase = ({
 		}
 
 		const results = simLottery(chances, numToPick);
+		const currentYear = new Date().getFullYear();
+		setDraftSeason(`${currentYear}-${currentYear + 1}`);
 		setLotteryResults(undefined);
 		setActiveResults(results);
-		setRevealStep(0);
-		setPhase("reveals");
+		setRevealStep(-1);
+		setPhase("waiting");
 		setStatus("running");
 	};
 
 	const resetShowcase = () => {
+		[heartbeatRef, championsRef].forEach((ref) => {
+			if (ref.current) {
+				ref.current.pause();
+				ref.current.currentTime = 0;
+			}
+		});
 		setStatus("idle");
 		setActiveResults(undefined);
 		setRevealStep(-1);
-		setPhase("reveals");
+		setPhase("waiting");
 		setLotteryResults(undefined);
 	};
 
@@ -250,7 +357,7 @@ export const LotteryShowcase = ({
 					/>
 					<div>
 						<div className="lottery-stage__leagueLabel">
-							NBA Style Draft Night
+							The Ultimate League
 						</div>
 						<div className="lottery-stage__leagueSubLabel">
 							Lottery broadcast presentation
@@ -264,39 +371,21 @@ export const LotteryShowcase = ({
 					<div className="lottery-stage__eyebrow">Commissioner Reveal Mode</div>
 					<h2 className="lottery-stage__title">Lottery Reveal Show</h2>
 					<p className="lottery-stage__subtitle">
-						{names.length} teams, {numToPick} lottery selections.{" "}
-						{statusMessage}
+						{status === "idle"
+							? "14 teams, only 1 will land the top pick. Ready when you are."
+							: statusMessage}
 					</p>
 				</div>
 
 				<div className="lottery-stage__actions">
-					<Button
-						variant="primary"
-						outline
-						onClick={toggleMusic}
-						disabled={false}
-					>
-						{musicPlaying ? "Pause Music" : "Play Music"}
-					</Button>
-					<Button
-						variant="success"
+					<button
+						className="lottery-start-btn"
 						onClick={startLottery}
 						disabled={disabled || names.length === 0}
-						className="ml-2"
+						type="button"
 					>
 						{status === "idle" ? "Start Lottery" : "Run Again"}
-					</Button>
-					{status !== "idle" ? (
-						<Button
-							variant="danger"
-							outline
-							className="ml-2"
-							onClick={resetShowcase}
-							disabled={disabled}
-						>
-							Reset Board
-						</Button>
-					) : null}
+					</button>
 				</div>
 			</div>
 
@@ -390,15 +479,16 @@ export const LotteryShowcase = ({
 								Final envelope on the podium
 							</div>
 							<div className="lottery-stage__headlineText">
-								AND THE TOP PICK GOES TO...
-							</div>
-							<div className="lottery-stage__headlineSubtext">
-								The top 3 will be revealed together in 10 seconds.
+								The #1 pick of the {draftSeason} Ultimate League Rookie Draft
+								goes to...
 							</div>
 						</div>
 					) : activeResults && currentPositions.length > 0 ? (
 						currentPositions.length === 1 ? (
-							<div className="lottery-stage__spotlight">
+							<div
+								className="lottery-stage__spotlight"
+								key={`spotlight-${currentPositions[0]}`}
+							>
 								<div className="lottery-stage__spotlightLabel">
 									Now revealing the {ordinal(currentPositions[0] + 1)} pick
 								</div>
@@ -413,7 +503,7 @@ export const LotteryShowcase = ({
 								</div>
 							</div>
 						) : (
-							<div className="lottery-stage__podium">
+							<div className="lottery-stage__podium" key="podium-reveal">
 								{podiumOrder(currentPositions).map((position) => {
 									const teamIndex = activeResults[position];
 									return (
@@ -448,8 +538,7 @@ export const LotteryShowcase = ({
 								Awaiting the draw
 							</div>
 							<p className="lottery-stage__placeholderText">
-								Press Start Lottery to animate the reveal from the 14th pick up
-								to the final three.
+								Press Start Lottery to animate the reveal.
 							</p>
 						</div>
 					)}
